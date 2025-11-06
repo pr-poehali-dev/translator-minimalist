@@ -1,12 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { useToast } from '@/hooks/use-toast';
 import Icon from '@/components/ui/icon';
+import PremiumDialog from '@/components/PremiumDialog';
 
 const Index = () => {
+  const { toast } = useToast();
   const [genderInput, setGenderInput] = useState('');
   const [genderOutput, setGenderOutput] = useState('');
   const [genderDirection, setGenderDirection] = useState('female-to-male');
@@ -20,8 +25,71 @@ const Index = () => {
   const [generationOutput, setGenerationOutput] = useState('');
   const [generationDirection, setGenerationDirection] = useState('zoomer-to-boomer');
 
+  const [isPremium, setIsPremium] = useState(false);
+  const [usageCount, setUsageCount] = useState(0);
+  const [showPremiumDialog, setShowPremiumDialog] = useState(false);
+  const FREE_LIMIT = 10;
+
+  useEffect(() => {
+    const savedUsage = localStorage.getItem('translatorUsage');
+    const savedDate = localStorage.getItem('translatorDate');
+    const savedPremium = localStorage.getItem('isPremium');
+    const today = new Date().toDateString();
+
+    if (savedPremium === 'true') {
+      setIsPremium(true);
+    }
+
+    if (savedDate !== today) {
+      localStorage.setItem('translatorUsage', '0');
+      localStorage.setItem('translatorDate', today);
+      setUsageCount(0);
+    } else if (savedUsage) {
+      setUsageCount(parseInt(savedUsage));
+    }
+  }, []);
+
+  const incrementUsage = () => {
+    if (isPremium) return true;
+    
+    if (usageCount >= FREE_LIMIT) {
+      setShowPremiumDialog(true);
+      toast({
+        title: "Лимит исчерпан",
+        description: "Вы достигли лимита бесплатных переводов на сегодня. Перейдите на Premium!",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    const newCount = usageCount + 1;
+    setUsageCount(newCount);
+    localStorage.setItem('translatorUsage', newCount.toString());
+
+    if (newCount === FREE_LIMIT) {
+      toast({
+        title: "Последний бесплатный перевод",
+        description: "Вы использовали все бесплатные переводы на сегодня.",
+        variant: "default"
+      });
+    }
+
+    return true;
+  };
+
+  const handleUpgrade = () => {
+    setIsPremium(true);
+    localStorage.setItem('isPremium', 'true');
+    setShowPremiumDialog(false);
+    toast({
+      title: "Добро пожаловать в Premium! 🎉",
+      description: "Теперь у вас безлимитный доступ ко всем переводчикам."
+    });
+  };
+
   const translateGender = () => {
     if (!genderInput.trim()) return;
+    if (!incrementUsage()) return;
     
     const translations: Record<string, Record<string, string>> = {
       'female-to-male': {
@@ -41,6 +109,7 @@ const Index = () => {
 
   const translateAnimal = () => {
     if (!animalInput.trim()) return;
+    if (!incrementUsage()) return;
     
     const translations: Record<string, string> = {
       'cat': `😸 Мяу-мяу! (Перевод: "${animalInput}" - это значит, что кот хочет внимания и, возможно, еды)`,
@@ -56,6 +125,7 @@ const Index = () => {
 
   const translateGeneration = () => {
     if (!generationInput.trim()) return;
+    if (!incrementUsage()) return;
     
     const translations: Record<string, string> = {
       'zoomer-to-boomer': `В нормальном переводе: ${generationInput.toLowerCase()
@@ -93,14 +163,44 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-muted/20">
       <div className="container max-w-6xl mx-auto px-4 py-12">
-        <div className="text-center mb-12 animate-fade-in">
-          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            Универсальный Переводчик
-          </h1>
+        <div className="text-center mb-8 animate-fade-in">
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              Универсальный Переводчик
+            </h1>
+            {isPremium && (
+              <Badge className="bg-gradient-to-r from-primary to-secondary text-white">
+                <Icon name="Crown" size={16} className="mr-1" />
+                Premium
+              </Badge>
+            )}
+          </div>
           <p className="text-xl text-muted-foreground">
             Три уникальных переводчика в одном месте
           </p>
         </div>
+
+        {!isPremium && (
+          <Card className="mb-8 border-primary/50">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-sm font-medium">Переводов использовано сегодня</p>
+                  <p className="text-2xl font-bold">{usageCount} / {FREE_LIMIT}</p>
+                </div>
+                <Button
+                  variant="default"
+                  onClick={() => setShowPremiumDialog(true)}
+                  className="bg-gradient-to-r from-primary to-secondary"
+                >
+                  <Icon name="Crown" size={18} className="mr-2" />
+                  Перейти на Premium
+                </Button>
+              </div>
+              <Progress value={(usageCount / FREE_LIMIT) * 100} className="h-2" />
+            </CardContent>
+          </Card>
+        )}
 
         <Tabs defaultValue="gender" className="w-full">
           <TabsList className="grid w-full grid-cols-3 mb-8">
@@ -328,6 +428,12 @@ const Index = () => {
           </Card>
         </div>
       </div>
+
+      <PremiumDialog
+        open={showPremiumDialog}
+        onOpenChange={setShowPremiumDialog}
+        onUpgrade={handleUpgrade}
+      />
     </div>
   );
 };
