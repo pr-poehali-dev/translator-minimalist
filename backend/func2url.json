@@ -1,0 +1,4 @@
+{
+  "payment-webhook": "https://functions.poehali.dev/0c5914b9-5d3c-435c-a6fa-9596c8bb4e57",
+  "create-payment": "https://functions.poehali.dev/5bddec24-21a4-433a-9eb4-fecc6e54d136"
+}

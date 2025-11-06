@@ -1,0 +1,39 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS request for CORS",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": "",
+      "bodyMatcher": "exact"
+    },
+    {
+      "name": "Payment succeeded webhook",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "event": "payment.succeeded",
+        "object": {
+          "id": "test_payment_123",
+          "status": "succeeded",
+          "amount": {
+            "value": "199.00",
+            "currency": "RUB"
+          },
+          "metadata": {
+            "user_id": "test_user_123",
+            "subscription_type": "premium_monthly"
+          }
+        }
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "status": "success",
+        "payment_id": "string",
+        "user_id": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
